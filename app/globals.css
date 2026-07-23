@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #fbfaf7;
+  --ink: #1e2430;
+  --ink-muted: #5b6472;
+  --ink-faint: #8b93a0;
+  --accent: #0f6e63;
+  --accent-ink: #ffffff;
+  --accent-soft: #dceeeb;
+  --accent-soft-ink: #0b4a42;
+  --line: #e2dfd6;
+  --line-strong: #cfcbbe;
+  --warn-bg: #fbefc9;
+  --warn-ink: #7a5b06;
+  --warn-dot: #e8b93b;
+  --danger-bg: #f7deda;
+  --danger-ink: #7c2a1f;
+  --danger-dot: #c4483a;
+  --info-bg: #dceaf2;
+  --info-ink: #204b63;
+  --info-dot: #3b7ea8;
+  --ok-bg: #e3efe1;
+  --ok-ink: #2f5233;
+  --ok-dot: #5c8a5b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181f;
+    --surface: #1c212b;
+    --surface-2: #20262f;
+    --ink: #e7e7e2;
+    --ink-muted: #9ca3af;
+    --ink-faint: #6c7684;
+    --accent: #3fbbac;
+    --accent-ink: #062521;
+    --accent-soft: #163832;
+    --accent-soft-ink: #9fe0d5;
+    --line: #2a303b;
+    --line-strong: #394152;
+    --warn-bg: #3a2f12;
+    --warn-ink: #f0c955;
+    --warn-dot: #e8b93b;
+    --danger-bg: #3a1e1a;
+    --danger-ink: #ef9686;
+    --danger-dot: #da5a47;
+    --info-bg: #17303d;
+    --info-ink: #86c4e3;
+    --info-dot: #3b7ea8;
+    --ok-bg: #1c2c1f;
+    --ok-ink: #9cc79b;
+    --ok-dot: #5c8a5b;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    -apple-system, "Segoe UI", system-ui, sans-serif;
+}
