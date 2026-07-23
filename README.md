@@ -9,7 +9,19 @@ Google Form + スプレッドシート + GASで運用していた交通費(通�
 ## 技術スタック
 
 - Next.js (App Router, TypeScript)
-- Supabase (PostgreSQL)
+- Google Sheets(専用のシステムDBスプレッドシート。Supabase等の外部DBは使わない方針)
 - NextAuth.js (Google OAuth, tcdigital.jpドメイン制限)
-- googleapis (Google Calendar API / Google Drive API)
+- googleapis (Google Sheets API / Google Calendar API / Google Drive API)
 - Tailwind CSS
+
+## セットアップ手順
+
+1. `npm install`
+2. Google Cloudでサービスアカウントを作成し、Sheets API・Calendar API・Drive APIを有効化する
+3. システムDB用に空のGoogleスプレッドシートを1つ作成し、そのIDを控える
+4. 作成したスプレッドシートを、サービスアカウントのメールアドレスに「編集者」として共有する
+5. `.env.local.example` を `.env.local` にコピーし、各値を設定する
+6. `npm run setup:sheets` を実行する(`lib/google/schema.ts` の定義どおりに、必要なタブと見出し行を自動作成する。何度実行しても安全)
+7. Google Cloud ConsoleでOAuthクライアントを作成し、`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` を設定する
+8. 「社員マスタ」タブに、少なくとも自分自身の行(社員番号・氏名・メールアドレス・ロール=admin)を手動で1件登録する(初回ログインの照合に必要)
+9. `npm run dev` で起動し、Googleでログインする
