@@ -1,16 +1,23 @@
 import { randomUUID } from "crypto";
-import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/adminSession";
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { appendRow, getRows } from "@/lib/google/sheets";
 import { getCurrentMonth } from "@/lib/business/acceptance";
 import { getDashboardData } from "@/lib/business/aggregation";
+import { sendGmail } from "@/lib/google/gmail";
 
-type EmployeeRow = { 社員番号: string; メールアドレス: string };
+type EmployeeRow = { 社員番号: string; 氏名: string; メールアドレス: string };
 
-export async function POST(req: Request, context: { params: Promise<{ employeeId: string }> }) {
-  const session = await requireAdminSession();
-  if (!session) {
+export async function POST(req: NextRequest, context: { params: Promise<{ employeeId: string }> }) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token || token.role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!token.accessToken) {
+    return NextResponse.json(
+      { error: "メール送信の権限がありません。再ログインしてください。" },
+      { status: 403 }
+    );
   }
 
   const { employeeId } = await context.params;
@@ -25,10 +32,22 @@ export async function POST(req: Request, context: { params: Promise<{ employeeId
 
   const employees = await getRows<EmployeeRow>("社員マスタ");
   const employee = employees.find((e) => e.社員番号 === employeeId);
+  if (!employee) {
+    return NextResponse.json({ error: "社員マスタに該当者が見つかりません" }, { status: 404 });
+  }
 
-  // NOTE: 実際のメール送信基盤(Gmail API等)は未接続(要件定義時点で未確定のため)。
-  // 本番導入時はここでメール送信APIを呼び出す。現状は送信履歴の記録のみ行う。
-  console.log(`[stub send] to=${employee?.メールアドレス ?? "unknown"} subject=${subject}`);
+  try {
+    await sendGmail({
+      accessToken: token.accessToken,
+      to: employee.メールアドレス,
+      toName: employee.氏名,
+      subject,
+      body,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "メール送信に失敗しました";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 
   await appendRow("通知履歴", {
     ログID: randomUUID(),
@@ -37,7 +56,7 @@ export async function POST(req: Request, context: { params: Promise<{ employeeId
     エラー種別: target.status,
     件名: subject,
     本文: body,
-    送信者: session.user.employeeNo,
+    送信者: token.employeeNo,
     送信日時: new Date().toISOString(),
   });
 

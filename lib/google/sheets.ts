@@ -94,6 +94,25 @@ export async function getRows<T extends Record<string, string>>(sheetName: strin
   });
 }
 
+/** 複数の新規行を1回のAPI呼び出しでまとめて末尾に追加する(大量データの一括投入向け)。 */
+export async function appendRows(
+  sheetName: string,
+  rows: Record<string, CellValue>[]
+): Promise<void> {
+  if (rows.length === 0) return;
+  const spreadsheetId = assertSpreadsheetId();
+  const sheets = getSheets();
+  const header = await getHeader(sheetName);
+  const values = rows.map((row) => header.map((key) => formatCell(row[key])));
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `${sheetName}!A1`,
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values },
+  });
+}
+
 /** 新規行を末尾に追加する。rowのキーはヘッダー行の列名と一致させる。 */
 export async function appendRow(
   sheetName: string,
