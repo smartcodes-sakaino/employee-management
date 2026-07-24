@@ -39,8 +39,14 @@ export function AppShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const nav = role === "admin" ? ADMIN_NAV : EMPLOYEE_NAV;
-  const groupLabel = role === "admin" ? "管理メニュー" : "申請メニュー";
+  // 管理者も1人の社員として自分の交通費を申請するため、adminの場合は
+  // 「申請メニュー」と「管理メニュー」の両方を表示する(社員は申請メニューのみ)。
+  const groups = role === "admin"
+    ? [
+        { label: "申請メニュー", items: EMPLOYEE_NAV },
+        { label: "管理メニュー", items: ADMIN_NAV },
+      ]
+    : [{ label: "申請メニュー", items: EMPLOYEE_NAV }];
   const initial = userName ? userName.slice(0, 1) : "?";
 
   return (
@@ -53,17 +59,18 @@ export function AppShell({
           </span>
         </div>
 
-        <div>
-          <div className="mb-1 px-2 text-[11px] uppercase tracking-[0.08em] text-[var(--ink-faint)]">
-            {groupLabel}
-          </div>
-          <nav className="flex flex-col gap-0.5">
-            {nav.map((item) =>
-              item.divider ? (
-                <div key={item.href} className="my-2 mx-1 h-px bg-[var(--line)]">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <div className="mb-1 px-2 text-[11px] uppercase tracking-[0.08em] text-[var(--ink-faint)]">
+              {group.label}
+            </div>
+            <nav className="flex flex-col gap-0.5">
+              {group.items.map((item) => (
+                <div key={item.href}>
+                  {item.divider && <div className="my-2 mx-1 h-px bg-[var(--line)]" />}
                   <Link
                     href={item.href}
-                    className={`mt-2 block rounded-[6px] px-2.5 py-2 text-[13.5px] ${
+                    className={`block rounded-[6px] px-2.5 py-2 text-[13.5px] ${
                       pathname?.startsWith(item.href)
                         ? "bg-[var(--accent-soft)] font-bold text-[var(--accent-soft-ink)]"
                         : "text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
@@ -72,22 +79,10 @@ export function AppShell({
                     {item.label}
                   </Link>
                 </div>
-              ) : (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-[6px] px-2.5 py-2 text-[13.5px] ${
-                    pathname?.startsWith(item.href)
-                      ? "bg-[var(--accent-soft)] font-bold text-[var(--accent-soft-ink)]"
-                      : "text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              )
-            )}
-          </nav>
-        </div>
+              ))}
+            </nav>
+          </div>
+        ))}
 
         <div className="mt-auto border-t border-[var(--line)] pt-3">
           <div className="flex items-center gap-2 rounded-[6px] p-2">

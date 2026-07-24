@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/commute");
   }
   return (
-    <AppShell role="admin" userName={session.user.name ?? ""} userEmail={session.user.email ?? ""}>
+    <AppShell role={session.user.role} userName={session.user.name ?? ""} userEmail={session.user.email ?? ""}>
       {children}
     </AppShell>
   );

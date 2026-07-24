@@ -10,7 +10,7 @@ export default async function EmployeeLayout({ children }: { children: React.Rea
   }
   return (
     <AppShell
-      role="employee"
+      role={session.user.role}
       userName={session.user.name ?? ""}
       userEmail={session.user.email ?? ""}
     >

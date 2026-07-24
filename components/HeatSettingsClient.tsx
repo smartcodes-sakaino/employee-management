@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, GhostButton, TextInput } from "@/components/ui";
+import { Banner, Card, GhostButton, PrimaryButton, TextInput } from "@/components/ui";
 
 const BASES = ["東京", "大阪", "福岡", "静岡"] as const;
 
@@ -16,6 +16,8 @@ export function HeatSettingsClient({ month }: { month: string }) {
   const [days, setDays] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [manualDay, setManualDay] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<{ type: "ok" | "danger"; text: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +59,36 @@ export function HeatSettingsClient({ month }: { month: string }) {
     if (res.ok) setDays(data.days ?? []);
   }
 
+  async function importFromWbgt() {
+    setImporting(true);
+    setImportMessage(null);
+    try {
+      const res = await fetch("/api/admin/heat-settings/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base, month }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportMessage({ type: "danger", text: data.error ?? "取得に失敗しました" });
+        return;
+      }
+      setDays(data.days ?? []);
+      const count = (data.imported ?? []).length;
+      setImportMessage({
+        type: "ok",
+        text:
+          count > 0
+            ? `環境省サイトから${count}件の発表日を取得し、対象日に追加しました。`
+            : "環境省サイトを確認しましたが、対象月にアラート発表はありませんでした。",
+      });
+    } catch {
+      setImportMessage({ type: "danger", text: "取得に失敗しました。時間をおいて再度お試しください。" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -69,22 +101,44 @@ export function HeatSettingsClient({ month }: { month: string }) {
         title="拠点別の対象日"
         hint="拠点ごとに熱中症アラートの対象日を指定します。ここで指定した日が、申請者の熱中症アラート申請画面で候補日として表示されます。"
       >
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          {BASES.map((b) => (
-            <button
-              key={b}
-              type="button"
-              onClick={() => setBase(b)}
-              className={`rounded-full border px-4 py-1.5 text-[13px] font-bold ${
-                base === b
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
-                  : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--ink-muted)]"
-              }`}
-            >
-              {b}
-            </button>
-          ))}
+        {importMessage && (
+          <Banner variant={importMessage.type === "ok" ? "ok" : "danger"}>{importMessage.text}</Banner>
+        )}
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {BASES.map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => setBase(b)}
+                className={`rounded-full border px-4 py-1.5 text-[13px] font-bold ${
+                  base === b
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                    : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--ink-muted)]"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+          <PrimaryButton type="button" onClick={importFromWbgt} disabled={importing}>
+            {importing ? "取得中…" : "環境省サイトから取得"}
+          </PrimaryButton>
         </div>
+
+        <p className="mb-3 text-[12px] text-[var(--ink-faint)]">
+          環境省 熱中症予防情報サイト(
+          <a
+            href="https://www.wbgt.env.go.jp/alert_record.php"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            発表履歴
+          </a>
+          )から、選択中の拠点・対象月に実際にアラートが発表された日を自動取得し、対象日に追加します。
+        </p>
 
         <div className="flex min-h-[48px] flex-wrap gap-2 rounded-[6px] border border-dashed border-[var(--line-strong)] bg-[var(--surface-2)] p-3">
           {loading ? (

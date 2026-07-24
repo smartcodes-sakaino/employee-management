@@ -2,9 +2,16 @@ import { google, sheets_v4 } from "googleapis";
 
 type CellValue = string | number | boolean | null | undefined;
 
-const SPREADSHEET_ID = process.env.SYSTEM_DB_SPREADSHEET_ID ?? "";
-
 let sheetsClient: sheets_v4.Sheets | null = null;
+
+/**
+ * process.env.SYSTEM_DB_SPREADSHEET_ID をモジュール読み込み時ではなく呼び出し時に読む。
+ * (standaloneスクリプトでloadEnvConfig()を自前で呼ぶ場合、import文はスクリプト本体の
+ *  処理より先に評価されるため、トップレベルのconstにしてしまうと値が空のまま固定されてしまう)
+ */
+function getSpreadsheetId(): string {
+  return process.env.SYSTEM_DB_SPREADSHEET_ID ?? "";
+}
 
 function getAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -28,10 +35,12 @@ function getSheets(): sheets_v4.Sheets {
   return sheetsClient;
 }
 
-function assertSpreadsheetId() {
-  if (!SPREADSHEET_ID) {
+function assertSpreadsheetId(): string {
+  const id = getSpreadsheetId();
+  if (!id) {
     throw new Error("SYSTEM_DB_SPREADSHEET_ID が設定されていません(.env.local参照)");
   }
+  return id;
 }
 
 function formatCell(value: CellValue): string {
@@ -53,10 +62,10 @@ function columnLetter(index: number): string {
 }
 
 async function getHeader(sheetName: string): Promise<string[]> {
-  assertSpreadsheetId();
+  const spreadsheetId = assertSpreadsheetId();
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId,
     range: `${sheetName}!1:1`,
   });
   return (res.data.values?.[0] ?? []) as string[];
@@ -67,10 +76,10 @@ async function getHeader(sheetName: string): Promise<string[]> {
  * 未提出などで値が入っていないセルは空文字になる。
  */
 export async function getRows<T extends Record<string, string>>(sheetName: string): Promise<T[]> {
-  assertSpreadsheetId();
+  const spreadsheetId = assertSpreadsheetId();
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId,
     range: `${sheetName}!A1:ZZ`,
   });
   const values = res.data.values ?? [];
@@ -90,12 +99,12 @@ export async function appendRow(
   sheetName: string,
   row: Record<string, CellValue>
 ): Promise<void> {
-  assertSpreadsheetId();
+  const spreadsheetId = assertSpreadsheetId();
   const sheets = getSheets();
   const header = await getHeader(sheetName);
   const values = header.map((key) => formatCell(row[key]));
   await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId,
     range: `${sheetName}!A1`,
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
@@ -112,11 +121,11 @@ export async function updateRow(
   rowNumber: number,
   patch: Record<string, CellValue>
 ): Promise<void> {
-  assertSpreadsheetId();
+  const spreadsheetId = assertSpreadsheetId();
   const sheets = getSheets();
   const header = await getHeader(sheetName);
   const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId,
     range: `${sheetName}!${rowNumber}:${rowNumber}`,
   });
   const currentRow = existing.data.values?.[0] ?? [];
@@ -125,7 +134,7 @@ export async function updateRow(
   );
   const lastCol = columnLetter(header.length - 1);
   await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId,
     range: `${sheetName}!A${rowNumber}:${lastCol}${rowNumber}`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [merged] },
@@ -157,9 +166,9 @@ export async function findRowNumber(
 }
 
 async function getSheetId(sheetName: string): Promise<number> {
-  assertSpreadsheetId();
+  const spreadsheetId = assertSpreadsheetId();
   const sheets = getSheets();
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
   const sheet = meta.data.sheets?.find((s) => s.properties?.title === sheetName);
   const sheetId = sheet?.properties?.sheetId;
   if (sheetId === undefined || sheetId === null) {
@@ -170,11 +179,11 @@ async function getSheetId(sheetName: string): Promise<number> {
 
 /** 指定した行(1-indexed。ヘッダー行を含む)を完全に削除する(以降の行は繰り上がる) */
 export async function deleteRow(sheetName: string, rowNumber: number): Promise<void> {
-  assertSpreadsheetId();
+  const spreadsheetId = assertSpreadsheetId();
   const sheets = getSheets();
   const sheetId = await getSheetId(sheetName);
   await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId,
     requestBody: {
       requests: [
         {
