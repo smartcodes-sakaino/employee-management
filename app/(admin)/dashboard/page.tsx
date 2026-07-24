@@ -1,12 +1,9 @@
-import { PlaceholderScreen } from "@/components/PlaceholderScreen";
+import { getCurrentMonth } from "@/lib/business/acceptance";
+import { getDashboardData } from "@/lib/business/aggregation";
+import { DashboardClient } from "@/components/DashboardClient";
 
-export default function DashboardPage() {
-  return (
-    <PlaceholderScreen
-      eyebrow="DASHBOARD"
-      title="集計ダッシュボード"
-      subtitle="色分けで要確認の申請者が一目で分かります。"
-      description="社員リスト順の一覧表示、未提出者の空欄表示、特記事項の編集、社員リスト形式でのエクスポート(TSV/CSV)を実装予定。"
-    />
-  );
+export default async function DashboardPage() {
+  const month = await getCurrentMonth();
+  const rows = await getDashboardData(month);
+  return <DashboardClient month={month} initialRows={rows} />;
 }

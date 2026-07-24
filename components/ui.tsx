@@ -105,6 +105,57 @@ export function Banner({ variant, children }: { variant: BannerVariant; children
   );
 }
 
+export function Modal({
+  open,
+  onClose,
+  title,
+  hint,
+  maxWidthClass,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  hint?: string;
+  maxWidthClass?: string;
+  children: ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-6"
+      onClick={onClose}
+    >
+      <div
+        className={`max-h-[88vh] w-full overflow-y-auto rounded-[10px] bg-[var(--surface)] p-6 shadow-2xl ${
+          maxWidthClass ?? "max-w-[520px]"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-1 text-[16px] font-bold text-[var(--ink)]">{title}</h3>
+        {hint ? <p className="mb-4 text-[12.5px] text-[var(--ink-muted)]">{hint}</p> : null}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function IconCopyButton({ onClick, title }: { onClick: () => void; title: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="flex flex-none items-center rounded p-0.5 text-[var(--ink-faint)] hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
+    >
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+        <rect x="5" y="5" width="7" height="7" rx="1.3" stroke="currentColor" strokeWidth="1.2" />
+        <rect x="2" y="2" width="7" height="7" rx="1.3" stroke="currentColor" strokeWidth="1.2" />
+      </svg>
+    </button>
+  );
+}
+
 export function Chip({ variant, children }: { variant: BannerVariant | "neutral"; children: ReactNode }) {
   const cls =
     variant === "neutral"

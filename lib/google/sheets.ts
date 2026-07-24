@@ -133,6 +133,18 @@ export async function updateRow(
 }
 
 /**
+ * 条件に一致する最初の行番号(1-indexed、ヘッダー行を含む)を返す。見つからない場合は-1。
+ */
+export async function findRowNumberByMatch(
+  sheetName: string,
+  predicate: (row: Record<string, string>) => boolean
+): Promise<number> {
+  const rows = await getRows<Record<string, string>>(sheetName);
+  const idx = rows.findIndex(predicate);
+  return idx === -1 ? -1 : idx + 2;
+}
+
+/**
  * matchKey列がmatchValueと一致する最初の行番号(1-indexed、ヘッダー行を含む)を返す。
  * 見つからない場合は-1。
  */
@@ -141,7 +153,41 @@ export async function findRowNumber(
   matchKey: string,
   matchValue: string
 ): Promise<number> {
-  const rows = await getRows<Record<string, string>>(sheetName);
-  const idx = rows.findIndex((r) => r[matchKey] === matchValue);
-  return idx === -1 ? -1 : idx + 2;
+  return findRowNumberByMatch(sheetName, (r) => r[matchKey] === matchValue);
+}
+
+async function getSheetId(sheetName: string): Promise<number> {
+  assertSpreadsheetId();
+  const sheets = getSheets();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const sheet = meta.data.sheets?.find((s) => s.properties?.title === sheetName);
+  const sheetId = sheet?.properties?.sheetId;
+  if (sheetId === undefined || sheetId === null) {
+    throw new Error(`シート「${sheetName}」が見つかりません`);
+  }
+  return sheetId;
+}
+
+/** 指定した行(1-indexed。ヘッダー行を含む)を完全に削除する(以降の行は繰り上がる) */
+export async function deleteRow(sheetName: string, rowNumber: number): Promise<void> {
+  assertSpreadsheetId();
+  const sheets = getSheets();
+  const sheetId = await getSheetId(sheetName);
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: rowNumber - 1,
+              endIndex: rowNumber,
+            },
+          },
+        },
+      ],
+    },
+  });
 }
