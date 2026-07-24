@@ -1,5 +1,6 @@
 import { appendRow, deleteRow, findRowNumberByMatch, getRows } from "@/lib/google/sheets";
 import { fetchAlertDaysFromSource } from "@/lib/business/wbgtAlerts";
+import { fetchJapanesePublicHolidays, isHolidayDate } from "@/lib/business/holidays";
 
 const SHEET = "熱中症アラート対象日マスタ";
 
@@ -45,17 +46,36 @@ export async function removeTargetDay(base: string, month: string, day: number):
 
 /**
  * 環境省サイトから、指定拠点・対象月に実際にアラートが発表された日を取得し、
+ * 土日・祝日・会社指定休日(＝そもそも出勤しない日)を除いたうえで、
  * 既存の対象日マスタに(重複を避けつつ)まとめて追加する。
  */
 export async function importTargetDaysFromWbgt(
   base: string,
   month: string,
   setBy: string
-): Promise<{ imported: number[]; days: number[] }> {
-  const fetched = await fetchAlertDaysFromSource(base, month);
+): Promise<{ imported: number[]; excludedNonWorkingDays: number[]; days: number[] }> {
+  const [year, monthNum] = month.split("-").map(Number);
+
+  const [fetched, companyHolidayRows, publicHolidays] = await Promise.all([
+    fetchAlertDaysFromSource(base, month),
+    getRows<{ 日付: string }>("会社指定休日"),
+    fetchJapanesePublicHolidays(),
+  ]);
+  const nonWorkingDates = new Set([...companyHolidayRows.map((r) => r.日付), ...publicHolidays]);
+
+  const workingDays: number[] = [];
+  const excludedNonWorkingDays: number[] = [];
   for (const day of fetched) {
+    if (isHolidayDate(year, monthNum, day, nonWorkingDates)) {
+      excludedNonWorkingDays.push(day);
+    } else {
+      workingDays.push(day);
+    }
+  }
+
+  for (const day of workingDays) {
     await addTargetDay(base, month, day, setBy);
   }
   const days = await getTargetDays(base, month);
-  return { imported: fetched, days };
+  return { imported: workingDays, excludedNonWorkingDays, days };
 }

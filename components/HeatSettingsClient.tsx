@@ -75,12 +75,14 @@ export function HeatSettingsClient({ month }: { month: string }) {
       }
       setDays(data.days ?? []);
       const count = (data.imported ?? []).length;
+      const excludedCount = (data.excludedNonWorkingDays ?? []).length;
+      const excludedNote = excludedCount > 0 ? `(土日祝・会社休日を${excludedCount}件除外)` : "";
       setImportMessage({
         type: "ok",
         text:
           count > 0
-            ? `環境省サイトから${count}件の発表日を取得し、対象日に追加しました。`
-            : "環境省サイトを確認しましたが、対象月にアラート発表はありませんでした。",
+            ? `環境省サイトから${count}件の発表日を取得し、対象日に追加しました。${excludedNote}`
+            : `環境省サイトを確認しましたが、対象月に追加できるアラート発表はありませんでした。${excludedNote}`,
       });
     } catch {
       setImportMessage({ type: "danger", text: "取得に失敗しました。時間をおいて再度お試しください。" });

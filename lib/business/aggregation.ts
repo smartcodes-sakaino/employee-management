@@ -1,5 +1,5 @@
 import { getRows } from "@/lib/google/sheets";
-import { isHolidayDate } from "@/lib/business/holidays";
+import { fetchJapanesePublicHolidays, isHolidayDate } from "@/lib/business/holidays";
 
 type EmployeeRow = {
   社員番号: string;
@@ -57,7 +57,7 @@ export type EmployeeAggregation = {
  * (社員数分だけAPI呼び出しを繰り返すと遅くなる/レート制限にかかるため)
  */
 export async function getDashboardData(month: string): Promise<EmployeeAggregation[]> {
-  const [employees, commuteApps, commuteDates, tripEntries, heatApps, heatDates, holidayRows, aggRows] =
+  const [employees, commuteApps, commuteDates, tripEntries, heatApps, heatDates, holidayRows, aggRows, publicHolidays] =
     await Promise.all([
       getRows<EmployeeRow>("社員マスタ"),
       getRows<CommuteAppRow>("通勤交通費申請"),
@@ -67,9 +67,11 @@ export async function getDashboardData(month: string): Promise<EmployeeAggregati
       getRows<HeatDateRow>("熱中症アラート申請_利用日"),
       getRows<CompanyHolidayRow>("会社指定休日"),
       getRows<AggregationRow>("集計結果"),
+      fetchJapanesePublicHolidays(),
     ]);
 
-  const companyHolidays = new Set(holidayRows.map((h) => h.日付));
+  // 休日判定は「土日 + 日本の祝日 + 会社指定休日」で統一する
+  const nonWorkingDates = new Set([...holidayRows.map((h) => h.日付), ...publicHolidays]);
   const [year, m] = month.split("-").map(Number);
 
   const active = employees.filter((e) => !e.退職日);
@@ -99,7 +101,7 @@ export async function getDashboardData(month: string): Promise<EmployeeAggregati
             const fee = Number(commuteApp.片道単価) || 0;
             commuteAmount = fee * oneWayDays.length + fee * 2 * roundDays.length;
             const hasHoliday = [...oneWayDays, ...roundDays].some((d) =>
-              isHolidayDate(year, m, d, companyHolidays)
+              isHolidayDate(year, m, d, nonWorkingDates)
             );
             commuteStatus = hasHoliday ? "holiday" : "ok";
           }
@@ -118,7 +120,7 @@ export async function getDashboardData(month: string): Promise<EmployeeAggregati
         }, 0);
         const hasHoliday = myTripEntries.some((e) => {
           const day = Number(e.日付?.split("-")[2]);
-          return day && isHolidayDate(year, m, day, companyHolidays);
+          return day && isHolidayDate(year, m, day, nonWorkingDates);
         });
         tripStatus = hasHoliday ? "holiday" : "ok";
       }
