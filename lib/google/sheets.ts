@@ -94,6 +94,31 @@ export async function getRows<T extends Record<string, string>>(sheetName: strin
   });
 }
 
+/**
+ * ヘッダー行を残したまま、データ行全体を渡した内容で完全に置き換える(既存データは全て消える)。
+ * 名簿の全面差し替えなど「同期」用途向け。
+ */
+export async function replaceRows(
+  sheetName: string,
+  rows: Record<string, CellValue>[]
+): Promise<void> {
+  const spreadsheetId = assertSpreadsheetId();
+  const sheets = getSheets();
+  const header = await getHeader(sheetName);
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: `${sheetName}!A2:ZZ`,
+  });
+  if (rows.length === 0) return;
+  const values = rows.map((row) => header.map((key) => formatCell(row[key])));
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${sheetName}!A2`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values },
+  });
+}
+
 /** 複数の新規行を1回のAPI呼び出しでまとめて末尾に追加する(大量データの一括投入向け)。 */
 export async function appendRows(
   sheetName: string,
