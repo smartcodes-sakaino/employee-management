@@ -3,7 +3,7 @@ import { getToken } from "next-auth/jwt";
 
 // Next.js 16でmiddleware規約はproxyに名称変更された。next-authのwithAuthヘルパーは
 // 旧middleware規約向けのため、ここではgetToken()を直接使う実装にしている。
-const ADMIN_PATHS = ["/dashboard", "/mail", "/heat-settings", "/acceptance", "/rules", "/issue"];
+const ADMIN_PATHS = ["/dashboard", "/mail", "/heat-settings", "/acceptance", "/rules", "/issue", "/employees"];
 
 export async function proxy(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });

@@ -11,8 +11,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (session.user.role !== "admin") {
     redirect("/commute");
   }
+  const dbSheetUrl = process.env.SYSTEM_DB_SPREADSHEET_ID
+    ? `https://docs.google.com/spreadsheets/d/${process.env.SYSTEM_DB_SPREADSHEET_ID}/edit`
+    : undefined;
+
   return (
-    <AppShell role={session.user.role} userName={session.user.name ?? ""} userEmail={session.user.email ?? ""}>
+    <AppShell
+      role={session.user.role}
+      userName={session.user.name ?? ""}
+      userEmail={session.user.email ?? ""}
+      dbSheetUrl={dbSheetUrl}
+    >
       {children}
     </AppShell>
   );

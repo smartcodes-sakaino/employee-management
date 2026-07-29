@@ -9,6 +9,7 @@ type NavItem = {
   href: string;
   label: string;
   divider?: boolean;
+  external?: boolean;
 };
 
 const EMPLOYEE_NAV: NavItem[] = [
@@ -25,26 +26,32 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/acceptance", label: "受付管理" },
   { href: "/rules", label: "ルール管理" },
   { href: "/issue", label: "起票実行" },
+  { href: "/employees", label: "社員・権限管理" },
 ];
 
 export function AppShell({
   role,
   userName,
   userEmail,
+  dbSheetUrl,
   children,
 }: {
   role: "employee" | "admin";
   userName: string;
   userEmail: string;
+  dbSheetUrl?: string;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   // 管理者も1人の社員として自分の交通費を申請するため、adminの場合は
   // 「申請メニュー」と「管理メニュー」の両方を表示する(社員は申請メニューのみ)。
+  const adminNav = dbSheetUrl
+    ? [...ADMIN_NAV, { href: dbSheetUrl, label: "DBスプレッドシートを開く", external: true, divider: true }]
+    : ADMIN_NAV;
   const groups = role === "admin"
     ? [
         { label: "申請メニュー", items: EMPLOYEE_NAV },
-        { label: "管理メニュー", items: ADMIN_NAV },
+        { label: "管理メニュー", items: adminNav },
       ]
     : [{ label: "申請メニュー", items: EMPLOYEE_NAV }];
   const initial = userName ? userName.slice(0, 1) : "?";
@@ -68,16 +75,27 @@ export function AppShell({
               {group.items.map((item) => (
                 <div key={item.href}>
                   {item.divider && <div className="my-2 mx-1 h-px bg-[var(--line)]" />}
-                  <Link
-                    href={item.href}
-                    className={`block rounded-[6px] px-2.5 py-2 text-[13.5px] ${
-                      pathname?.startsWith(item.href)
-                        ? "bg-[var(--accent-soft)] font-bold text-[var(--accent-soft-ink)]"
-                        : "text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
+                  {item.external ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-[6px] px-2.5 py-2 text-[13.5px] text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
+                    >
+                      {item.label} ↗
+                    </a>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className={`block rounded-[6px] px-2.5 py-2 text-[13.5px] ${
+                        pathname?.startsWith(item.href)
+                          ? "bg-[var(--accent-soft)] font-bold text-[var(--accent-soft-ink)]"
+                          : "text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  )}
                 </div>
               ))}
             </nav>
