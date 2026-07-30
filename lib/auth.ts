@@ -16,6 +16,19 @@ async function findActiveEmployeeByEmail(email: string): Promise<EmployeeRow | u
   return employees.find((e) => e.メールアドレス === email && !e.退職日);
 }
 
+/**
+ * 社員マスタに登録せず管理者として扱いたいアカウント(情シス担当など)向けの許可リスト。
+ * カンマ区切りでメールアドレスを指定する(例: "m.nishimoto@tcdigital.jp,other@tcdigital.jp")。
+ * これらのアカウントは交通費申請の対象にはならず、社員・権限管理画面にも表示されない。
+ */
+function isExtraAdminEmail(email: string): boolean {
+  const list = (process.env.EXTRA_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(email.toLowerCase());
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -40,12 +53,17 @@ export const authOptions: NextAuthOptions = {
       if (!email || !domain || !email.toLowerCase().endsWith(`@${domain.toLowerCase()}`)) {
         return false;
       }
+      if (isExtraAdminEmail(email)) return true;
       const employee = await findActiveEmployeeByEmail(email);
       return Boolean(employee);
     },
     async jwt({ token, profile, account }) {
       const email = profile?.email ?? token.email;
-      if (email) {
+      if (email && isExtraAdminEmail(email)) {
+        token.employeeNo = "";
+        token.role = "admin";
+        token.name = profile?.name ?? token.name ?? "";
+      } else if (email) {
         const employee = await findActiveEmployeeByEmail(email);
         if (employee) {
           token.employeeNo = employee.社員番号;
