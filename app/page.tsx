@@ -7,5 +7,5 @@ export default async function RootPage() {
   if (!session) {
     redirect("/login");
   }
-  redirect(session.user.role === "admin" ? "/dashboard" : "/commute");
+  redirect("/commute");
 }
